@@ -1,5 +1,4 @@
 from torch.utils.data import Dataset, DataLoader
-import torchvision.transforms as transforms
 import random
 import numpy as np
 import scipy.io as sio
@@ -184,7 +183,39 @@ class crwu_dataset(Dataset):
             return len(self.test_data)
 
 
-class cifar_dataloader():
+class Jitter:
+    def __init__(self, sigma=0.03):
+        self.sigma = sigma
+
+    def __call__(self, x):
+        return x + np.random.normal(loc=0., scale=self.sigma, size=x.shape)
+
+
+class Scaling:
+    def __init__(self, sigma=0.1):
+        self.sigma = sigma
+
+    def __call__(self, x):
+        factor = np.random.normal(loc=1., scale=self.sigma, size=(x.shape[0], x.shape[2]))
+        return np.multiply(x, factor[:, np.newaxis, :])
+
+
+class ToTensor:
+    def __call__(self, x):
+        return torch.from_numpy(x).to(dtype=torch.float32)
+
+
+class ComposeTransform:
+    def __init__(self, transforms):
+        self.transforms = transforms
+
+    def __call__(self, x):
+        for t in self.transforms:
+            x = t(x)
+        return x
+
+
+class crwu_dataloader():
     def __init__(self, dataset, r, noise_mode, batch_size, num_workers, root_dir, log, noise_file=''):
         self.dataset = dataset
         self.r = r
@@ -195,22 +226,20 @@ class cifar_dataloader():
         self.log = log
         self.noise_file = noise_file
         if self.dataset == 'crwu':
-            self.transform_train = transforms.Compose([
-                transforms.RandomCrop(32, padding=4),
-                transforms.RandomHorizontalFlip(),
-                transforms.ToTensor(),
-                transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+            self.transform_train = ComposeTransform([
+                Jitter(),
+                Scaling(),
+                ToTensor(),
             ])
-            self.transform_test = transforms.Compose([
-                transforms.ToTensor(),
-                transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+            self.transform_test = ComposeTransform([
+                ToTensor(),
             ])
 
     def run(self, mode, pred=[], prob=[]):
         if mode == 'warmup':
             all_dataset = crwu_dataset(dataset=self.dataset, noise_mode=self.noise_mode, r=self.r,
-                                        root_dir=self.root_dir, transform=self.transform_train, mode="all",
-                                        noise_file=self.noise_file)
+                                       root_dir=self.root_dir, transform=self.transform_train, mode="all",
+                                       noise_file=self.noise_file)
             trainloader = DataLoader(
                 dataset=all_dataset,
                 batch_size=self.batch_size * 2,
@@ -220,8 +249,8 @@ class cifar_dataloader():
 
         elif mode == 'train':
             labeled_dataset = crwu_dataset(dataset=self.dataset, noise_mode=self.noise_mode, r=self.r,
-                                            root_dir=self.root_dir, transform=self.transform_train, mode="labeled",
-                                            noise_file=self.noise_file, pred=pred, probability=prob, log=self.log)
+                                           root_dir=self.root_dir, transform=self.transform_train, mode="labeled",
+                                           noise_file=self.noise_file, pred=pred, probability=prob, log=self.log)
             labeled_trainloader = DataLoader(
                 dataset=labeled_dataset,
                 batch_size=self.batch_size,
@@ -229,8 +258,8 @@ class cifar_dataloader():
                 num_workers=self.num_workers)
 
             unlabeled_dataset = crwu_dataset(dataset=self.dataset, noise_mode=self.noise_mode, r=self.r,
-                                              root_dir=self.root_dir, transform=self.transform_train, mode="unlabeled",
-                                              noise_file=self.noise_file, pred=pred)
+                                             root_dir=self.root_dir, transform=self.transform_train, mode="unlabeled",
+                                             noise_file=self.noise_file, pred=pred)
             unlabeled_trainloader = DataLoader(
                 dataset=unlabeled_dataset,
                 batch_size=self.batch_size,
@@ -240,7 +269,7 @@ class cifar_dataloader():
 
         elif mode == 'test':
             test_dataset = crwu_dataset(dataset=self.dataset, noise_mode=self.noise_mode, r=self.r,
-                                         root_dir=self.root_dir, transform=self.transform_test, mode='test')
+                                        root_dir=self.root_dir, transform=self.transform_test, mode='test')
             test_loader = DataLoader(
                 dataset=test_dataset,
                 batch_size=self.batch_size,
@@ -250,8 +279,8 @@ class cifar_dataloader():
 
         elif mode == 'eval_train':
             eval_dataset = crwu_dataset(dataset=self.dataset, noise_mode=self.noise_mode, r=self.r,
-                                         root_dir=self.root_dir, transform=self.transform_test, mode='all',
-                                         noise_file=self.noise_file)
+                                        root_dir=self.root_dir, transform=self.transform_test, mode='all',
+                                        noise_file=self.noise_file)
             eval_loader = DataLoader(
                 dataset=eval_dataset,
                 batch_size=self.batch_size,
