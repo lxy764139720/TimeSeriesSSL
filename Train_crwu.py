@@ -9,7 +9,7 @@ import random
 import os
 import argparse
 import numpy as np
-from PreResNet import *
+from crwu_cnn import *
 from sklearn.mixture import GaussianMixture
 import dataloader_crwu as dataloader
 
@@ -27,7 +27,7 @@ parser.add_argument('--id', default='')
 parser.add_argument('--seed', default=42)
 parser.add_argument('--gpuid', default=0, type=int)
 parser.add_argument('--num_class', default=10, type=int)
-parser.add_argument('--data_path', default='./CRWU-dataset', type=str, help='path to dataset')
+parser.add_argument('--data_path', default='./CRWU_dataset', type=str, help='path to dataset')
 parser.add_argument('--dataset', default='crwu', type=str)
 args = parser.parse_args()
 
@@ -219,7 +219,7 @@ class NegEntropy(object):
 
 
 def create_model():
-    model = ResNet18(num_classes=args.num_class)
+    model = Model(num_classes=args.num_class)
     model = model.cuda()
     return model
 

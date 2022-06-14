@@ -3,7 +3,6 @@ import random
 import numpy as np
 import scipy.io as sio
 from sklearn.model_selection import train_test_split
-from PIL import Image
 import json
 import os
 import torch
@@ -89,7 +88,7 @@ def load_crwu_data():
     data1, label1 = load_fault_data()
     data2, label2 = load_normal_data()
     data = np.concatenate((data1, data2))
-    label = np.concatenate((label1, label2))
+    label = np.concatenate((label1, label2)).astype(int)
     X_train, X_test, y_train, y_test = train_test_split(data, label, random_state=42, stratify=label)
     return X_train, X_test, y_train, y_test
 
@@ -107,9 +106,11 @@ class crwu_dataset(Dataset):
         if self.mode == 'test':
             if dataset == 'crwu':
                 _, self.test_data, _, self.test_label = load_crwu_data()
+                self.test_label = self.test_label.flatten().tolist()
         else:
             if dataset == 'crwu':
                 train_data, _, train_label, _ = load_crwu_data()
+                train_label = train_label.flatten().tolist()
 
             if os.path.exists(noise_file):
                 noise_label = json.load(open(noise_file, "r"))
@@ -131,6 +132,7 @@ class crwu_dataset(Dataset):
                     else:
                         noise_label.append(train_label[i])
                 print("save noisy labels to %s ..." % noise_file)
+                # print(noise_label)
                 json.dump(noise_label, open(noise_file, "w"))
 
             if self.mode == 'all':
@@ -196,8 +198,8 @@ class Scaling:
         self.sigma = sigma
 
     def __call__(self, x):
-        factor = np.random.normal(loc=1., scale=self.sigma, size=(x.shape[0], x.shape[2]))
-        return np.multiply(x, factor[:, np.newaxis, :])
+        factor = np.random.normal(loc=1., scale=self.sigma, size=x.shape)
+        return np.multiply(x, factor)
 
 
 class ToTensor:
