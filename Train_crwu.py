@@ -305,11 +305,11 @@ for epoch in range(args.num_epochs + 1):
         pred2 = (prob2 > args.p_threshold)
 
         print('Train Net1')
-        labeled_trainloader, unlabeled_trainloader = loader.run('train', pred2, prob2)  # co-divide
+        labeled_trainloader, unlabeled_trainloader = loader.run('train', pred2, prob2, "net1", epoch)  # co-divide
         train(epoch, net1, net2, optimizer1, labeled_trainloader, unlabeled_trainloader, "net1")  # train net1
 
         print('\nTrain Net2')
-        labeled_trainloader, unlabeled_trainloader = loader.run('train', pred1, prob1)  # co-divide
+        labeled_trainloader, unlabeled_trainloader = loader.run('train', pred1, prob1, "net2", epoch)  # co-divide
         train(epoch, net2, net1, optimizer2, labeled_trainloader, unlabeled_trainloader, "net2")  # train net2
 
     test(epoch, net1, net2)

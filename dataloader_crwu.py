@@ -7,6 +7,7 @@ import json
 import os
 import torch
 from torchnet.meter import AUCMeter
+import wandb
 
 
 def load_fault_data():
@@ -95,7 +96,7 @@ def load_crwu_data():
 
 class crwu_dataset(Dataset):
     def __init__(self, dataset, r, noise_mode, root_dir, transform, mode, noise_file='', pred=[], probability=[],
-                 log=''):
+                 log='', flag='', epoch=-1):
 
         self.r = r  # noise ratio
         self.transform = transform
@@ -150,6 +151,7 @@ class crwu_dataset(Dataset):
                     auc, _, _ = auc_meter.value()
                     log.write('Numer of labeled samples:%d   AUC:%.3f\n' % (pred.sum(), auc))
                     log.flush()
+                    wandb.log({(flag + " AUC"): auc}, step=epoch)
 
                 elif self.mode == "unlabeled":
                     pred_idx = (1 - pred).nonzero()[0]
@@ -237,7 +239,7 @@ class crwu_dataloader():
                 ToTensor(),
             ])
 
-    def run(self, mode, pred=[], prob=[]):
+    def run(self, mode, pred=[], prob=[], flag='', epoch=-1):
         if mode == 'warmup':
             all_dataset = crwu_dataset(dataset=self.dataset, noise_mode=self.noise_mode, r=self.r,
                                        root_dir=self.root_dir, transform=self.transform_train, mode="all",
@@ -251,8 +253,9 @@ class crwu_dataloader():
 
         elif mode == 'train':
             labeled_dataset = crwu_dataset(dataset=self.dataset, noise_mode=self.noise_mode, r=self.r,
-                                           root_dir=self.root_dir, transform=self.transform_train, mode="labeled",
-                                           noise_file=self.noise_file, pred=pred, probability=prob, log=self.log)
+                                           root_dir=self.root_dir, transform=self.transform_train,
+                                           mode="labeled", noise_file=self.noise_file, pred=pred, probability=prob,
+                                           log=self.log, flag=flag, epoch=epoch)
             labeled_trainloader = DataLoader(
                 dataset=labeled_dataset,
                 batch_size=self.batch_size,
