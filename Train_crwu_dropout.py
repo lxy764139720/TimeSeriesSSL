@@ -10,7 +10,7 @@ import random
 import os
 import argparse
 import numpy as np
-from crwu_cnn import *
+from crwu_cnn_dropout import *
 from sklearn.mixture import GaussianMixture
 import wandb
 import dataloader_crwu as dataloader
@@ -37,7 +37,7 @@ cur_time = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
 cfg = vars(args)
 print(cfg)
 wandb.init(project="TimeSeriesSSL_crwu", config=cfg)
-wandb.run.name = cur_time
+wandb.run.name = "cnn-dropout-" + str(cur_time)
 wandb.run.save()
 
 torch.cuda.set_device(args.gpuid)
