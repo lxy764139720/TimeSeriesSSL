@@ -229,6 +229,7 @@ class crwu_dataloader():
         self.root_dir = root_dir
         self.log = log
         self.noise_file = noise_file
+        self.labeled_dataset = None
         if self.dataset == 'crwu':
             self.transform_train = ComposeTransform([
                 Jitter(),
@@ -256,6 +257,10 @@ class crwu_dataloader():
                                            root_dir=self.root_dir, transform=self.transform_train,
                                            mode="labeled", noise_file=self.noise_file, pred=pred, probability=prob,
                                            log=self.log, flag=flag, epoch=epoch)
+            if len(labeled_dataset) == 0:
+                labeled_dataset = self.labeled_dataset
+            else:
+                self.labeled_dataset = labeled_dataset
             labeled_trainloader = DataLoader(
                 dataset=labeled_dataset,
                 batch_size=self.batch_size,
