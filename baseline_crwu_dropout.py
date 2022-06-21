@@ -37,7 +37,7 @@ cur_time = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
 cfg = vars(args)
 print(cfg)
 wandb.init(project="TimeSeriesSSL_crwu", config=cfg)
-wandb.run.name = "baseline-" + str(cur_time)
+wandb.run.name = "baseline-dropout" + str(cur_time)
 wandb.run.save()
 
 torch.cuda.set_device(args.gpuid)
