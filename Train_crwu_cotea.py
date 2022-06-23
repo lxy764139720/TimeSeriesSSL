@@ -198,7 +198,8 @@ def train(train_loader, epoch, model1, optimizer1, model2, optimizer2):
     train_acc1 = float(train_correct) / float(train_total)
     train_acc2 = float(train_correct2) / float(train_total2)
     wandb.log({"net1 loss": np.mean(loss_ls1),
-               "net2 loss": np.mean(loss_ls2)})
+               "net2 loss": np.mean(loss_ls2)},
+              step=epoch)
     return train_acc1, train_acc2
 
 
@@ -293,7 +294,8 @@ def main():
         wandb.log({"net1 Accuracy": test_acc1,
                    "net2 Accuracy": test_acc2,
                    "mean Accuracy": (test_acc1 + test_acc2) / 2,
-                   "Accuracy": max(test_acc1, test_acc2)})
+                   "Accuracy": max(test_acc1, test_acc2)},
+                  step=epoch)
 
         with open(txtfile, "a") as myfile:
             myfile.write(

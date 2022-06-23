@@ -13,10 +13,10 @@ import numpy as np
 from crwu_cnn_dropout import *
 from sklearn.mixture import GaussianMixture
 import wandb
-import dataloader_crwu_sep_aug as dataloader
+import dataloader_jn as dataloader
 
-parser = argparse.ArgumentParser(description='PyTorch CRWU Training')
-parser.add_argument('--batch_size', default=64, type=int, help='train batchsize')
+parser = argparse.ArgumentParser(description='PyTorch JN Training')
+parser.add_argument('--batch_size', default=256, type=int, help='train batchsize')
 parser.add_argument('--lr', '--learning_rate', default=0.002, type=float, help='initial learning rate')
 parser.add_argument('--noise_mode', default='sym')
 # parser.add_argument('--alpha', default=4, type=float, help='parameter for Beta')
@@ -29,15 +29,15 @@ parser.add_argument('--id', default='')
 parser.add_argument('--seed', default=42)
 parser.add_argument('--gpuid', default=0, type=int)
 parser.add_argument('--num_class', default=10, type=int)
-parser.add_argument('--data_path', default='./CRWU_dataset', type=str, help='path to dataset')
-parser.add_argument('--dataset', default='crwu', type=str)
+parser.add_argument('--data_path', default='./JN_dataset', type=str, help='path to dataset')
+parser.add_argument('--dataset', default='jn', type=str)
 args = parser.parse_args()
 
 cur_time = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
 cfg = vars(args)
 print(cfg)
-wandb.init(project="TimeSeriesSSL_crwu", config=cfg)
-wandb.run.name = "baseline-gap-dropout" + str(cur_time)
+wandb.init(project="TimeSeriesSSL_jn", config=cfg)
+wandb.run.name = "baseline-" + str(cur_time)
 wandb.run.save()
 
 torch.cuda.set_device(args.gpuid)
@@ -97,9 +97,9 @@ def create_model():
 stats_log = open('./checkpoint/%s_%.1f_%s' % (args.dataset, args.r, args.noise_mode) + '_stats.txt', 'w')
 test_log = open('./checkpoint/%s_%.1f_%s' % (args.dataset, args.r, args.noise_mode) + '_acc.txt', 'w')
 
-loader = dataloader.crwu_dataloader(args.dataset, r=args.r, noise_mode=args.noise_mode, batch_size=args.batch_size,
-                                     num_workers=5, root_dir=args.data_path, log=stats_log,
-                                     noise_file='%s/%.1f_%s.json' % (args.data_path, args.r, args.noise_mode))
+loader = dataloader.jn_dataloader(args.dataset, r=args.r, noise_mode=args.noise_mode, batch_size=args.batch_size,
+                                  num_workers=5, root_dir=args.data_path, log=stats_log,
+                                  noise_file='%s/%.1f_%s.json' % (args.data_path, args.r, args.noise_mode))
 
 print('| Building net')
 net1 = create_model()
