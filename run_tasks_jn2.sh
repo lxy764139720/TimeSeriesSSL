@@ -1,8 +1,19 @@
-python baseline_jn.py --gpuid=1 --r=0.2 --noise_mode='sym' --batch_size=256 --lr=0.002 --num_epochs=300
-python baseline_jn.py --gpuid=1 --r=0.5 --noise_mode='sym' --batch_size=256 --lr=0.002 --num_epochs=300
-python baseline_jn.py --gpuid=1 --r=0.8 --noise_mode='sym' --batch_size=256 --lr=0.002 --num_epochs=300
-python baseline_jn.py --gpuid=1 --r=0.9 --noise_mode='sym' --batch_size=256 --lr=0.002 --num_epochs=300
-python baseline_jn.py --gpuid=1 --r=0.2 --noise_mode='asym' --batch_size=256 --lr=0.002 --num_epochs=300
-python baseline_jn.py --gpuid=1 --r=0.5 --noise_mode='asym' --batch_size=256 --lr=0.002 --num_epochs=300
-python baseline_jn.py --gpuid=1 --r=0.8 --noise_mode='asym' --batch_size=256 --lr=0.002 --num_epochs=300
-python baseline_jn.py --gpuid=1 --r=0.9 --noise_mode='asym' --batch_size=256 --lr=0.002 --num_epochs=300
+python Train_jn.py --gpuid=0 --r=0.8 --noise_mode='sym' --lambda_u=25 --p_threshold=0.4
+python Train_jn.py --gpuid=0 --r=0.8 --noise_mode='sym' --lambda_u=25 --p_threshold=0.6
+python Train_jn.py --gpuid=0 --r=0.8 --noise_mode='sym' --lambda_u=25 --p_threshold=0.8
+python Train_jn.py --gpuid=0 --r=0.8 --noise_mode='sym' --lambda_u=40 --p_threshold=0.4
+python Train_jn.py --gpuid=0 --r=0.8 --noise_mode='sym' --lambda_u=40 --p_threshold=0.6
+python Train_jn.py --gpuid=0 --r=0.8 --noise_mode='sym' --lambda_u=40 --p_threshold=0.8
+python Train_jn.py --gpuid=0 --r=0.8 --noise_mode='sym' --lambda_u=60 --p_threshold=0.4
+python Train_jn.py --gpuid=0 --r=0.8 --noise_mode='sym' --lambda_u=60 --p_threshold=0.6
+python Train_jn.py --gpuid=0 --r=0.8 --noise_mode='sym' --lambda_u=60 --p_threshold=0.8
+
+python Train_jn.py --gpuid=0 --r=0.9 --noise_mode='sym' --lambda_u=25 --p_threshold=0.4
+python Train_jn.py --gpuid=0 --r=0.9 --noise_mode='sym' --lambda_u=25 --p_threshold=0.6
+python Train_jn.py --gpuid=0 --r=0.9 --noise_mode='sym' --lambda_u=25 --p_threshold=0.8
+python Train_jn.py --gpuid=0 --r=0.9 --noise_mode='sym' --lambda_u=40 --p_threshold=0.4
+python Train_jn.py --gpuid=0 --r=0.9 --noise_mode='sym' --lambda_u=40 --p_threshold=0.6
+python Train_jn.py --gpuid=0 --r=0.9 --noise_mode='sym' --lambda_u=40 --p_threshold=0.8
+python Train_jn.py --gpuid=0 --r=0.9 --noise_mode='sym' --lambda_u=60 --p_threshold=0.4
+python Train_jn.py --gpuid=0 --r=0.9 --noise_mode='sym' --lambda_u=60 --p_threshold=0.6
+python Train_jn.py --gpuid=0 --r=0.9 --noise_mode='sym' --lambda_u=60 --p_threshold=0.8

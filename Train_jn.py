@@ -268,8 +268,8 @@ cudnn.benchmark = True
 criterion = SemiLoss()
 # optimizer1 = optim.SGD(net1.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
 # optimizer2 = optim.SGD(net2.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
-optimizer1 = optim.Adam(net1.parameters(), lr=args.lr)
-optimizer2 = optim.Adam(net2.parameters(), lr=args.lr)
+optimizer1 = optim.Adam(net1.parameters(), lr=args.lr, weight_decay=5e-4)
+optimizer2 = optim.Adam(net2.parameters(), lr=args.lr, weight_decay=5e-4)
 wandb.config["optimizer"] = str(optimizer1).split(' ')[0]
 
 CE = nn.CrossEntropyLoss(reduction='none')

@@ -8,7 +8,7 @@ from torch.autograd import Variable
 from torch.utils.data import Dataset, DataLoader
 import torchvision.transforms as transforms
 
-from dataloader_crwu_cotea import jn_dataset, ToTensor
+from dataloader_jn_cotea import jn_dataset, ToTensor
 from crwu_cnn_dropout import Model
 import argparse, sys
 import numpy as np
@@ -31,7 +31,7 @@ parser.add_argument('--forget_rate', type=float, help='forget rate', default=Non
 parser.add_argument('--noise_mode', type=str, help='[pairflip, sym, asym]', default='sym')
 parser.add_argument('--num_gradual', type=int, default=10,
                     help='how many epochs for linear drop rate. This parameter is equal to Ek for lambda(E) in the paper.')
-parser.add_argument('--dataset', type=str, help='crwu', default='crwu')
+parser.add_argument('--dataset', type=str, help='jn', default='jn')
 parser.add_argument('--n_epoch', type=int, default=300)
 parser.add_argument('--num_class', default=10, type=int)
 parser.add_argument('--seed', type=int, default=42)
@@ -41,13 +41,13 @@ parser.add_argument('--gpuid', default=0, type=int)
 parser.add_argument('--epoch_decay_start', type=int, default=80)
 parser.add_argument('--model_type', type=str, help='[coteaching, coteaching_plus]', default='coteaching_plus')
 parser.add_argument('--fr_type', type=str, help='forget rate type', default='type_1')
-parser.add_argument('--data_path', default='./CRWU_dataset', type=str, help='path to dataset')
+parser.add_argument('--data_path', default='./JN_dataset', type=str, help='path to dataset')
 args = parser.parse_args()
 
 cur_time = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
 cfg = vars(args)
 print(cfg)
-wandb.init(project="TimeSeriesSSL_crwu", config=cfg)
+wandb.init(project="TimeSeriesSSL_jn", config=cfg)
 wandb.run.name = "co_teaching+-" + cur_time
 wandb.run.save()
 
@@ -62,7 +62,7 @@ batch_size = args.batch_size
 learning_rate = args.lr
 
 
-if args.dataset == 'crwu':
+if args.dataset == 'jn':
     init_epoch = 10
     train_dataset = jn_dataset(dataset=args.dataset,
                                r=args.r,
@@ -247,14 +247,14 @@ def main():
                              shuffle=False)
     # Define models
     print('building model...')
-    if args.dataset == 'crwu':
+    if args.dataset == 'jn':
         clf1 = Model()
 
     clf1.cuda()
     print(clf1.parameters)
     optimizer1 = torch.optim.Adam(clf1.parameters(), lr=learning_rate)
 
-    if args.dataset == 'crwu':
+    if args.dataset == 'jn':
         clf2 = Model()
 
     clf2.cuda()
