@@ -146,7 +146,7 @@ def main():
         train(trainloader, model, criterion, optimizer, epoch, y)
 
         # evaluate on validation set
-        prec1 = validate(testloader, model, criterion)
+        prec1 = validate(testloader, model, criterion, epoch)
         # remember best prec@1 and save checkpoint
         is_best = prec1 > best_prec1
         best_prec1 = max(prec1, best_prec1)
@@ -255,11 +255,10 @@ def train(train_loader, model, criterion, optimizer, epoch, y):
         np.save(y_file, y)
         y_record = args.dir + "record/y_%03d.npy" % epoch
         np.save(y_record, y)
-    wandb.log({"Loss": losses.val,
-               "Accuracy": top1.val}, step=epoch)
+    wandb.log({"Loss": losses.val}, step=epoch)
 
 
-def validate(val_loader, model, criterion):
+def validate(val_loader, model, criterion, epoch):
     batch_time = AverageMeter()
     losses = AverageMeter()
     top1 = AverageMeter()
@@ -298,6 +297,7 @@ def validate(val_loader, model, criterion):
 
     print(' * Prec@1 {top1.avg:.3f} Prec@5 {top5.avg:.3f}'
           .format(top1=top1, top5=top5))
+    wandb.log({"Accuracy": top1.val}, step=epoch)
 
     return top1.avg
 
