@@ -13,7 +13,7 @@ import torch.optim
 from torch.utils.data import Dataset, DataLoader
 import numpy as np
 import wandb
-from crwu_cnn_dropout import Model
+from cnn_dropout import Model
 from dataloader_jn_pencil import jn_dataset, ComposeTransform, Jitter, Scaling, ToTensor
 
 parser = argparse.ArgumentParser(description='PyTorch JN Training')
@@ -67,6 +67,7 @@ print(cfg)
 wandb.init(project="TimeSeriesSSL_jn", config=cfg)
 wandb.run.name = "pencil-" + cur_time
 wandb.run.save()
+wandb.config["algorithm"] = "PENCIL"
 
 best_prec1 = 0
 

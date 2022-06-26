@@ -10,7 +10,7 @@ import random
 import os
 import argparse
 import numpy as np
-from crwu_cnn_dropout import *
+from cnn_dropout import *
 from sklearn.mixture import GaussianMixture
 import wandb
 import dataloader_jn as dataloader
@@ -19,10 +19,6 @@ parser = argparse.ArgumentParser(description='PyTorch JN Training')
 parser.add_argument('--batch_size', default=256, type=int, help='train batchsize')
 parser.add_argument('--lr', '--learning_rate', default=0.002, type=float, help='initial learning rate')
 parser.add_argument('--noise_mode', default='sym')
-# parser.add_argument('--alpha', default=4, type=float, help='parameter for Beta')
-# parser.add_argument('--lambda_u', default=25, type=float, help='weight for unsupervised loss')
-# parser.add_argument('--p_threshold', default=0.5, type=float, help='clean probability threshold')
-# parser.add_argument('--T', default=0.5, type=float, help='sharpening temperature')
 parser.add_argument('--num_epochs', default=300, type=int)
 parser.add_argument('--r', default=0.5, type=float, help='noise ratio')
 parser.add_argument('--id', default='')
@@ -39,6 +35,7 @@ print(cfg)
 wandb.init(project="TimeSeriesSSL_jn", config=cfg)
 wandb.run.name = "baseline-" + str(cur_time)
 wandb.run.save()
+wandb.config["algorithm"] = "baseline"
 
 torch.cuda.set_device(args.gpuid)
 random.seed(args.seed)

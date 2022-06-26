@@ -183,7 +183,7 @@ class ComposeTransform:
         return x
 
 
-class jn_dataloader():
+class crwu_dataloader():
     def __init__(self, dataset, r, noise_mode, batch_size, num_workers, root_dir, noise_file):
         self.dataset = dataset
         self.r = r

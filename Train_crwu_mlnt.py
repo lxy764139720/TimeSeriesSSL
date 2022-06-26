@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 import torch.backends.cudnn as cudnn
-from crwu_cnn_dropout_mlnt import Model
+from cnn_dropout_mlnt import Model
 import math
 import os
 import sys
@@ -13,7 +13,7 @@ import argparse
 import datetime
 from torch.autograd import Variable
 from collections import OrderedDict
-from dataloader_crwu_mlnt import jn_dataloader
+from dataloader_crwu_mlnt import crwu_dataloader
 import random
 import wandb
 
@@ -44,6 +44,7 @@ print(cfg)
 wandb.init(project="TimeSeriesSSL_crwu", config=cfg)
 wandb.run.name = "mlnt-" + cur_time
 wandb.run.save()
+wandb.config["algorithm"] = "MLNT"
 
 random.seed(args.seed)
 torch.cuda.set_device(args.gpuid)
@@ -200,9 +201,9 @@ record.write('start iter: %d\n' % args.start_iter)
 record.write('mid iter: %d\n' % args.mid_iter)
 record.flush()
 
-loader = jn_dataloader(batch_size=args.batch_size, num_workers=5, dataset=args.dataset, noise_mode=args.noise_mode,
-                       r=args.r, root_dir=args.data_path,
-                       noise_file='%s/%.1f_%s.json' % (args.data_path, args.r, args.noise_mode))
+loader = crwu_dataloader(batch_size=args.batch_size, num_workers=5, dataset=args.dataset, noise_mode=args.noise_mode,
+                         r=args.r, root_dir=args.data_path,
+                         noise_file='%s/%.1f_%s.json' % (args.data_path, args.r, args.noise_mode))
 train_loader, test_loader = loader.run()
 
 best = 0

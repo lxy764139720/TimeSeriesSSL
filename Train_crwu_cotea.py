@@ -8,8 +8,8 @@ from torch.autograd import Variable
 from torch.utils.data import Dataset, DataLoader
 import torchvision.transforms as transforms
 
-from dataloader_crwu_cotea import jn_dataset, ToTensor
-from crwu_cnn_dropout import Model
+from dataloader_crwu_cotea import crwu_dataset, ToTensor
+from cnn_dropout import Model
 import argparse, sys
 import numpy as np
 import scipy.io as sio
@@ -50,6 +50,7 @@ print(cfg)
 wandb.init(project="TimeSeriesSSL_crwu", config=cfg)
 wandb.run.name = "co_teaching+-" + cur_time
 wandb.run.save()
+wandb.config["algorithm"] = "co-teaching+"
 
 # Seed
 torch.cuda.set_device(args.gpuid)
@@ -64,7 +65,7 @@ learning_rate = args.lr
 
 if args.dataset == 'crwu':
     init_epoch = 10
-    train_dataset = jn_dataset(dataset=args.dataset,
+    train_dataset = crwu_dataset(dataset=args.dataset,
                                r=args.r,
                                mode='train',
                                transform=ToTensor(),
@@ -72,7 +73,7 @@ if args.dataset == 'crwu':
                                noise_file='%s/%.1f_%s.json' % (args.data_path, args.r, args.noise_mode)
                                )
 
-    test_dataset = jn_dataset(dataset=args.dataset,
+    test_dataset = crwu_dataset(dataset=args.dataset,
                               r=args.r,
                               mode='test',
                               transform=ToTensor(),

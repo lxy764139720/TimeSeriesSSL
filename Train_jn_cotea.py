@@ -9,7 +9,7 @@ from torch.utils.data import Dataset, DataLoader
 import torchvision.transforms as transforms
 
 from dataloader_jn_cotea import jn_dataset, ToTensor
-from crwu_cnn_dropout import Model
+from cnn_dropout import Model
 import argparse, sys
 import numpy as np
 import scipy.io as sio
@@ -50,6 +50,7 @@ print(cfg)
 wandb.init(project="TimeSeriesSSL_jn", config=cfg)
 wandb.run.name = "co_teaching+-" + cur_time
 wandb.run.save()
+wandb.config["algorithm"] = "co-teaching+"
 
 # Seed
 torch.cuda.set_device(args.gpuid)
