@@ -10,7 +10,7 @@ import random
 import os
 import argparse
 import numpy as np
-from cnn_dropout import *
+from cnn_gap import *
 from sklearn.mixture import GaussianMixture
 import wandb
 import dataloader_jn as dataloader
@@ -40,6 +40,7 @@ wandb.init(project="TimeSeriesSSL_jn", config=cfg)
 wandb.run.name = cur_time
 wandb.run.save()
 wandb.config["algorithm"] = "divide-mix"
+wandb.config["architecture"] = "cnn_gap"
 
 torch.cuda.set_device(args.gpuid)
 random.seed(args.seed)
@@ -254,7 +255,7 @@ stats_log = open('./checkpoint/%s_%.1f_%s' % (args.dataset, args.r, args.noise_m
 test_log = open('./checkpoint/%s_%.1f_%s' % (args.dataset, args.r, args.noise_mode) + '_acc.txt', 'w')
 
 if args.dataset == 'jn':
-    warm_up = 10
+    warm_up = 5
 wandb.config["warm_up"] = warm_up
 
 loader = dataloader.jn_dataloader(args.dataset, r=args.r, noise_mode=args.noise_mode, batch_size=args.batch_size,
@@ -282,8 +283,10 @@ all_loss = [[], []]  # save the history of losses from two networks
 
 for epoch in range(args.num_epochs + 1):
     lr = args.lr
-    if epoch >= 50:
+    if epoch >= warm_up:
         lr /= 5
+    if epoch >= args.num_epochs * 0.5:
+        lr /= 2
     for param_group in optimizer1.param_groups:
         param_group['lr'] = lr
     for param_group in optimizer2.param_groups:

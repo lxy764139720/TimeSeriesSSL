@@ -282,8 +282,10 @@ all_loss = [[], []]  # save the history of losses from two networks
 
 for epoch in range(args.num_epochs + 1):
     lr = args.lr
-    if epoch >= 50:
+    if epoch >= warm_up:
         lr /= 5
+    if epoch >= args.num_epochs * 0.5:
+        lr /= 2
     for param_group in optimizer1.param_groups:
         param_group['lr'] = lr
     for param_group in optimizer2.param_groups:

@@ -10,7 +10,7 @@ import random
 import os
 import argparse
 import numpy as np
-from cnn_dropout import *
+from cnn_gap import *
 from sklearn.mixture import GaussianMixture
 import wandb
 import dataloader_jn as dataloader
@@ -102,9 +102,9 @@ print('| Building net')
 net1 = create_model()
 cudnn.benchmark = True
 
-# optimizer1 = optim.SGD(net1.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
+optimizer1 = optim.SGD(net1.parameters(), lr=args.lr, momentum=0.9, weight_decay=1e-4)
 # optimizer2 = optim.SGD(net2.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
-optimizer1 = optim.Adam(net1.parameters(), lr=args.lr, weight_decay=5e-4)
+# optimizer1 = optim.Adam(net1.parameters(), lr=args.lr, weight_decay=5e-4)
 wandb.config["optimizer"] = str(optimizer1).split(' ')[0]
 
 CEloss = nn.CrossEntropyLoss()
