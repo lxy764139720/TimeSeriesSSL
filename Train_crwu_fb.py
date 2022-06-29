@@ -37,9 +37,9 @@ cur_time = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
 cfg = vars(args)
 print(cfg)
 wandb.init(project="TimeSeriesSSL_crwu", config=cfg)
-wandb.run.name = cur_time
+wandb.run.name = "fb-" + cur_time
 wandb.run.save()
-wandb.config["algorithm"] = "divide-mix"
+wandb.config["algorithm"] = "divide-mix-fb"
 
 torch.cuda.set_device(args.gpuid)
 random.seed(args.seed)
@@ -181,9 +181,8 @@ def test(epoch, net1, net2):
     with torch.no_grad():
         for batch_idx, (inputs, targets) in enumerate(test_loader):
             inputs, targets = inputs.cuda(), targets.cuda()
-            outputs1 = net1(inputs)
             outputs2 = net2(inputs)
-            outputs = outputs1 + outputs2
+            outputs = outputs2
             _, predicted = torch.max(outputs, 1)
 
             total += targets.size(0)

@@ -10,12 +10,12 @@ import random
 import os
 import argparse
 import numpy as np
-from cnn_dropout import *
+from cnn_gap import *
 from sklearn.mixture import GaussianMixture
 import wandb
-import dataloader_crwu_sep_aug as dataloader
+import dataloader_jn as dataloader
 
-parser = argparse.ArgumentParser(description='PyTorch CRWU Training')
+parser = argparse.ArgumentParser(description='PyTorch JN Training')
 parser.add_argument('--batch_size', default=256, type=int, help='train batchsize')
 parser.add_argument('--lr', '--learning_rate', default=0.01, type=float, help='initial learning rate')
 parser.add_argument('--noise_mode', default='sym')
@@ -29,17 +29,18 @@ parser.add_argument('--id', default='')
 parser.add_argument('--seed', default=42)
 parser.add_argument('--gpuid', default=0, type=int)
 parser.add_argument('--num_class', default=10, type=int)
-parser.add_argument('--data_path', default='./CRWU_dataset', type=str, help='path to dataset')
-parser.add_argument('--dataset', default='crwu', type=str)
+parser.add_argument('--data_path', default='./JN_dataset', type=str, help='path to dataset')
+parser.add_argument('--dataset', default='jn', type=str)
 args = parser.parse_args()
 
 cur_time = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
 cfg = vars(args)
 print(cfg)
-wandb.init(project="TimeSeriesSSL_crwu", config=cfg)
-wandb.run.name = cur_time
+wandb.init(project="TimeSeriesSSL_jn", config=cfg)
+wandb.run.name = "wo-cotrain-" + cur_time
 wandb.run.save()
-wandb.config["algorithm"] = "divide-mix"
+wandb.config["algorithm"] = "divide-mix-wo-cotrain"
+wandb.config["architecture"] = "cnn_gap"
 
 torch.cuda.set_device(args.gpuid)
 random.seed(args.seed)
@@ -48,9 +49,8 @@ torch.cuda.manual_seed_all(args.seed)
 
 
 # Training
-def train(epoch, net, net2, optimizer, labeled_trainloader, unlabeled_trainloader, flag):
+def train(epoch, net, optimizer, labeled_trainloader, unlabeled_trainloader, flag):
     net.train()
-    net2.eval()  # fix one network and train the other
 
     unlabeled_train_iter = iter(unlabeled_trainloader)
     num_iter = (len(labeled_trainloader.dataset) // args.batch_size) + 1
@@ -76,11 +76,8 @@ def train(epoch, net, net2, optimizer, labeled_trainloader, unlabeled_trainloade
             # label co-guessing of unlabeled samples
             outputs_u11 = net(inputs_u)
             outputs_u12 = net(inputs_u2)
-            outputs_u21 = net2(inputs_u)
-            outputs_u22 = net2(inputs_u2)
 
-            pu = (torch.softmax(outputs_u11, dim=1) + torch.softmax(outputs_u12, dim=1) +
-                  torch.softmax(outputs_u21, dim=1) + torch.softmax(outputs_u22, dim=1)) / 4
+            pu = (torch.softmax(outputs_u11, dim=1) + torch.softmax(outputs_u12, dim=1)) / 4
             ptu = pu ** (1 / args.T)  # temperature sharpening
 
             targets_u = ptu / ptu.sum(dim=1, keepdim=True)  # normalize
@@ -173,17 +170,15 @@ def warmup(epoch, net, optimizer, dataloader, flag):
                (flag + " loss"): np.mean(ce_loss)}, step=epoch)
 
 
-def test(epoch, net1, net2):
+def test(epoch, net1):
     net1.eval()
-    net2.eval()
     correct = 0
     total = 0
     with torch.no_grad():
         for batch_idx, (inputs, targets) in enumerate(test_loader):
             inputs, targets = inputs.cuda(), targets.cuda()
             outputs1 = net1(inputs)
-            outputs2 = net2(inputs)
-            outputs = outputs1 + outputs2
+            outputs = outputs1
             _, predicted = torch.max(outputs, 1)
 
             total += targets.size(0)
@@ -195,7 +190,7 @@ def test(epoch, net1, net2):
     wandb.log({"Accuracy": acc}, step=epoch)
 
 
-def eval_train(model, all_loss, epoch):
+def eval_train(model, all_loss):
     model.eval()
     losses = torch.zeros(len(eval_loader.dataset))
     with torch.no_grad():
@@ -220,14 +215,6 @@ def eval_train(model, all_loss, epoch):
     gmm.fit(input_loss)
     prob = gmm.predict_proba(input_loss)
     prob = prob[:, gmm.means_.argmin()]
-    # if epoch == 50:
-    #     np.savetxt(args.data_path + '/losses.csv', input_loss.detach().cpu().numpy(), delimiter=',')
-    #     weights = gmm.weights_
-    #     means = gmm.means_
-    #     covs = gmm.covariances_
-    #     np.savetxt(args.data_path + '/weights.txt', weights)
-    #     np.savetxt(args.data_path + '/means.txt', means)
-    #     np.save(args.data_path + '/covs.npy', covs)
     return prob, all_loss
 
 
@@ -261,24 +248,22 @@ def create_model():
 stats_log = open('./checkpoint/%s_%.1f_%s' % (args.dataset, args.r, args.noise_mode) + '_stats.txt', 'w')
 test_log = open('./checkpoint/%s_%.1f_%s' % (args.dataset, args.r, args.noise_mode) + '_acc.txt', 'w')
 
-if args.dataset == 'crwu':
-    warm_up = 10
+if args.dataset == 'jn':
+    warm_up = 5
 wandb.config["warm_up"] = warm_up
 
-loader = dataloader.crwu_dataloader(args.dataset, r=args.r, noise_mode=args.noise_mode, batch_size=args.batch_size,
-                                     num_workers=5, root_dir=args.data_path, log=stats_log,
-                                     noise_file='%s/%.1f_%s.json' % (args.data_path, args.r, args.noise_mode))
+loader = dataloader.jn_dataloader(args.dataset, r=args.r, noise_mode=args.noise_mode, batch_size=args.batch_size,
+                                  num_workers=5, root_dir=args.data_path, log=stats_log,
+                                  noise_file='%s/%.1f_%s.json' % (args.data_path, args.r, args.noise_mode))
 
 print('| Building net')
 net1 = create_model()
-net2 = create_model()
 cudnn.benchmark = True
 
 criterion = SemiLoss()
 # optimizer1 = optim.SGD(net1.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
 # optimizer2 = optim.SGD(net2.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
 optimizer1 = optim.Adam(net1.parameters(), lr=args.lr, weight_decay=5e-4)
-optimizer2 = optim.Adam(net2.parameters(), lr=args.lr, weight_decay=5e-4)
 wandb.config["optimizer"] = str(optimizer1).split(' ')[0]
 
 CE = nn.CrossEntropyLoss(reduction='none')
@@ -296,8 +281,6 @@ for epoch in range(args.num_epochs + 1):
         lr /= 2
     for param_group in optimizer1.param_groups:
         param_group['lr'] = lr
-    for param_group in optimizer2.param_groups:
-        param_group['lr'] = lr
     test_loader = loader.run('test')
     eval_loader = loader.run('eval_train')
 
@@ -305,23 +288,14 @@ for epoch in range(args.num_epochs + 1):
         warmup_trainloader = loader.run('warmup')
         print('Warmup Net1')
         warmup(epoch, net1, optimizer1, warmup_trainloader, "net1")
-        print('\nWarmup Net2')
-        warmup(epoch, net2, optimizer2, warmup_trainloader, "net2")
 
     else:
-        prob1, all_loss[0] = eval_train(net1, all_loss[0], epoch)
-        prob2, all_loss[1] = eval_train(net2, all_loss[1], epoch)
-
+        prob1, all_loss[0] = eval_train(net1, all_loss[0])
         pred1 = (prob1 > args.p_threshold)
-        pred2 = (prob2 > args.p_threshold)
 
         print('Train Net1')
-        labeled_trainloader, unlabeled_trainloader = loader.run('train', pred2, prob2, "net1", epoch)  # co-divide
-        train(epoch, net1, net2, optimizer1, labeled_trainloader, unlabeled_trainloader, "net1")  # train net1
+        labeled_trainloader, unlabeled_trainloader = loader.run('train', pred1, prob1, "net1", epoch)  # co-divide
+        train(epoch, net1, optimizer1, labeled_trainloader, unlabeled_trainloader, "net1")  # train net1
 
-        print('\nTrain Net2')
-        labeled_trainloader, unlabeled_trainloader = loader.run('train', pred1, prob1, "net2", epoch)  # co-divide
-        train(epoch, net2, net1, optimizer2, labeled_trainloader, unlabeled_trainloader, "net2")  # train net2
-
-    test(epoch, net1, net2)
+    test(epoch, net1)
 wandb.finish()

@@ -37,9 +37,9 @@ cur_time = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
 cfg = vars(args)
 print(cfg)
 wandb.init(project="TimeSeriesSSL_crwu", config=cfg)
-wandb.run.name = cur_time
+wandb.run.name = "wo-refine-" + cur_time
 wandb.run.save()
-wandb.config["algorithm"] = "divide-mix"
+wandb.config["algorithm"] = "divide-mix-wo-refine"
 
 torch.cuda.set_device(args.gpuid)
 random.seed(args.seed)
@@ -91,7 +91,6 @@ def train(epoch, net, net2, optimizer, labeled_trainloader, unlabeled_trainloade
             outputs_x2 = net(inputs_x2)
 
             px = (torch.softmax(outputs_x, dim=1) + torch.softmax(outputs_x2, dim=1)) / 2
-            px = w_x * labels_x + (1 - w_x) * px
             ptx = px ** (1 / args.T)  # temperature sharpening
 
             targets_x = ptx / ptx.sum(dim=1, keepdim=True)  # normalize

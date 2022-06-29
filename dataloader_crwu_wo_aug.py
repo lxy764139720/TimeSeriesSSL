@@ -99,7 +99,6 @@ class crwu_dataset(Dataset):
                  log='', flag='', epoch=-1):
 
         self.r = r  # noise ratio
-        self.transform = transform
         self.mode = mode
         self.transition = {0: 0, 2: 0, 4: 7, 7: 7, 1: 1, 9: 1, 3: 5, 5: 3, 6: 6,
                            8: 8}  # class transition for asymmetric noise
@@ -163,21 +162,19 @@ class crwu_dataset(Dataset):
     def __getitem__(self, index):
         if self.mode == 'labeled':
             series, target, prob = self.train_data[index], self.noise_label[index], self.probability[index]
-            series1 = self.transform(series)
-            series2 = self.transform(series)
+            series1 = series.copy()
+            series2 = series.copy()
             return series1, series2, target, prob
         elif self.mode == 'unlabeled':
             series = self.train_data[index]
-            series1 = self.transform(series)
-            series2 = self.transform(series)
+            series1 = series.copy()
+            series2 = series.copy()
             return series1, series2
         elif self.mode == 'all':
             series, target = self.train_data[index], self.noise_label[index]
-            series = self.transform(series)
             return series, target, index
         elif self.mode == 'test':
             series, target = self.test_data[index], self.test_label[index]
-            series = self.transform(series)
             return series, target
 
     def __len__(self):
@@ -185,38 +182,6 @@ class crwu_dataset(Dataset):
             return len(self.train_data)
         else:
             return len(self.test_data)
-
-
-class Jitter:
-    def __init__(self, sigma=0.03):
-        self.sigma = sigma
-
-    def __call__(self, x):
-        return x + np.random.normal(loc=0., scale=self.sigma, size=x.shape)
-
-
-class Scaling:
-    def __init__(self, sigma=0.1):
-        self.sigma = sigma
-
-    def __call__(self, x):
-        factor = np.random.normal(loc=1., scale=self.sigma, size=x.shape)
-        return np.multiply(x, factor)
-
-
-class ToTensor:
-    def __call__(self, x):
-        return torch.from_numpy(x).to(dtype=torch.float32)
-
-
-class ComposeTransform:
-    def __init__(self, transforms):
-        self.transforms = transforms
-
-    def __call__(self, x):
-        for t in self.transforms:
-            x = t(x)
-        return x
 
 
 class crwu_dataloader():
@@ -232,14 +197,8 @@ class crwu_dataloader():
         self.labeled_dataset = None
         self.unlabeled_dataset = None
         if self.dataset == 'crwu':
-            self.transform_train = ComposeTransform([
-                Jitter(),
-                Scaling(),
-                ToTensor(),
-            ])
-            self.transform_test = ComposeTransform([
-                ToTensor(),
-            ])
+            self.transform_train = None
+            self.transform_test = None
 
     def run(self, mode, pred=[], prob=[], flag='', epoch=-1):
         if mode == 'warmup':

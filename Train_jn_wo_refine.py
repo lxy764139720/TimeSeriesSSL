@@ -10,12 +10,12 @@ import random
 import os
 import argparse
 import numpy as np
-from cnn_dropout import *
+from cnn_gap import *
 from sklearn.mixture import GaussianMixture
 import wandb
-import dataloader_crwu_sep_aug as dataloader
+import dataloader_jn as dataloader
 
-parser = argparse.ArgumentParser(description='PyTorch CRWU Training')
+parser = argparse.ArgumentParser(description='PyTorch JN Training')
 parser.add_argument('--batch_size', default=256, type=int, help='train batchsize')
 parser.add_argument('--lr', '--learning_rate', default=0.01, type=float, help='initial learning rate')
 parser.add_argument('--noise_mode', default='sym')
@@ -29,17 +29,18 @@ parser.add_argument('--id', default='')
 parser.add_argument('--seed', default=42)
 parser.add_argument('--gpuid', default=0, type=int)
 parser.add_argument('--num_class', default=10, type=int)
-parser.add_argument('--data_path', default='./CRWU_dataset', type=str, help='path to dataset')
-parser.add_argument('--dataset', default='crwu', type=str)
+parser.add_argument('--data_path', default='./JN_dataset', type=str, help='path to dataset')
+parser.add_argument('--dataset', default='jn', type=str)
 args = parser.parse_args()
 
 cur_time = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
 cfg = vars(args)
 print(cfg)
-wandb.init(project="TimeSeriesSSL_crwu", config=cfg)
-wandb.run.name = cur_time
+wandb.init(project="TimeSeriesSSL_jn", config=cfg)
+wandb.run.name = "wo-refine-" + cur_time
 wandb.run.save()
-wandb.config["algorithm"] = "divide-mix"
+wandb.config["algorithm"] = "divide-mix-wo-refine"
+wandb.config["architecture"] = "cnn_gap"
 
 torch.cuda.set_device(args.gpuid)
 random.seed(args.seed)
@@ -91,7 +92,6 @@ def train(epoch, net, net2, optimizer, labeled_trainloader, unlabeled_trainloade
             outputs_x2 = net(inputs_x2)
 
             px = (torch.softmax(outputs_x, dim=1) + torch.softmax(outputs_x2, dim=1)) / 2
-            px = w_x * labels_x + (1 - w_x) * px
             ptx = px ** (1 / args.T)  # temperature sharpening
 
             targets_x = ptx / ptx.sum(dim=1, keepdim=True)  # normalize
@@ -195,7 +195,7 @@ def test(epoch, net1, net2):
     wandb.log({"Accuracy": acc}, step=epoch)
 
 
-def eval_train(model, all_loss, epoch):
+def eval_train(model, all_loss):
     model.eval()
     losses = torch.zeros(len(eval_loader.dataset))
     with torch.no_grad():
@@ -220,14 +220,6 @@ def eval_train(model, all_loss, epoch):
     gmm.fit(input_loss)
     prob = gmm.predict_proba(input_loss)
     prob = prob[:, gmm.means_.argmin()]
-    # if epoch == 50:
-    #     np.savetxt(args.data_path + '/losses.csv', input_loss.detach().cpu().numpy(), delimiter=',')
-    #     weights = gmm.weights_
-    #     means = gmm.means_
-    #     covs = gmm.covariances_
-    #     np.savetxt(args.data_path + '/weights.txt', weights)
-    #     np.savetxt(args.data_path + '/means.txt', means)
-    #     np.save(args.data_path + '/covs.npy', covs)
     return prob, all_loss
 
 
@@ -261,13 +253,13 @@ def create_model():
 stats_log = open('./checkpoint/%s_%.1f_%s' % (args.dataset, args.r, args.noise_mode) + '_stats.txt', 'w')
 test_log = open('./checkpoint/%s_%.1f_%s' % (args.dataset, args.r, args.noise_mode) + '_acc.txt', 'w')
 
-if args.dataset == 'crwu':
-    warm_up = 10
+if args.dataset == 'jn':
+    warm_up = 5
 wandb.config["warm_up"] = warm_up
 
-loader = dataloader.crwu_dataloader(args.dataset, r=args.r, noise_mode=args.noise_mode, batch_size=args.batch_size,
-                                     num_workers=5, root_dir=args.data_path, log=stats_log,
-                                     noise_file='%s/%.1f_%s.json' % (args.data_path, args.r, args.noise_mode))
+loader = dataloader.jn_dataloader(args.dataset, r=args.r, noise_mode=args.noise_mode, batch_size=args.batch_size,
+                                  num_workers=5, root_dir=args.data_path, log=stats_log,
+                                  noise_file='%s/%.1f_%s.json' % (args.data_path, args.r, args.noise_mode))
 
 print('| Building net')
 net1 = create_model()
@@ -309,8 +301,8 @@ for epoch in range(args.num_epochs + 1):
         warmup(epoch, net2, optimizer2, warmup_trainloader, "net2")
 
     else:
-        prob1, all_loss[0] = eval_train(net1, all_loss[0], epoch)
-        prob2, all_loss[1] = eval_train(net2, all_loss[1], epoch)
+        prob1, all_loss[0] = eval_train(net1, all_loss[0])
+        prob2, all_loss[1] = eval_train(net2, all_loss[1])
 
         pred1 = (prob1 > args.p_threshold)
         pred2 = (prob2 > args.p_threshold)

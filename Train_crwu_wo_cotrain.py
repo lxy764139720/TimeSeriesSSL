@@ -37,9 +37,9 @@ cur_time = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
 cfg = vars(args)
 print(cfg)
 wandb.init(project="TimeSeriesSSL_crwu", config=cfg)
-wandb.run.name = cur_time
+wandb.run.name = "wo-cotrain-" + cur_time
 wandb.run.save()
-wandb.config["algorithm"] = "divide-mix"
+wandb.config["algorithm"] = "divide-mix-wo-cotrain"
 
 torch.cuda.set_device(args.gpuid)
 random.seed(args.seed)
@@ -48,9 +48,8 @@ torch.cuda.manual_seed_all(args.seed)
 
 
 # Training
-def train(epoch, net, net2, optimizer, labeled_trainloader, unlabeled_trainloader, flag):
+def train(epoch, net, optimizer, labeled_trainloader, unlabeled_trainloader, flag):
     net.train()
-    net2.eval()  # fix one network and train the other
 
     unlabeled_train_iter = iter(unlabeled_trainloader)
     num_iter = (len(labeled_trainloader.dataset) // args.batch_size) + 1
@@ -76,11 +75,8 @@ def train(epoch, net, net2, optimizer, labeled_trainloader, unlabeled_trainloade
             # label co-guessing of unlabeled samples
             outputs_u11 = net(inputs_u)
             outputs_u12 = net(inputs_u2)
-            outputs_u21 = net2(inputs_u)
-            outputs_u22 = net2(inputs_u2)
 
-            pu = (torch.softmax(outputs_u11, dim=1) + torch.softmax(outputs_u12, dim=1) +
-                  torch.softmax(outputs_u21, dim=1) + torch.softmax(outputs_u22, dim=1)) / 4
+            pu = (torch.softmax(outputs_u11, dim=1) + torch.softmax(outputs_u12, dim=1)) / 4
             ptu = pu ** (1 / args.T)  # temperature sharpening
 
             targets_u = ptu / ptu.sum(dim=1, keepdim=True)  # normalize
@@ -173,17 +169,15 @@ def warmup(epoch, net, optimizer, dataloader, flag):
                (flag + " loss"): np.mean(ce_loss)}, step=epoch)
 
 
-def test(epoch, net1, net2):
+def test(epoch, net1):
     net1.eval()
-    net2.eval()
     correct = 0
     total = 0
     with torch.no_grad():
         for batch_idx, (inputs, targets) in enumerate(test_loader):
             inputs, targets = inputs.cuda(), targets.cuda()
             outputs1 = net1(inputs)
-            outputs2 = net2(inputs)
-            outputs = outputs1 + outputs2
+            outputs = outputs1
             _, predicted = torch.max(outputs, 1)
 
             total += targets.size(0)
@@ -271,14 +265,12 @@ loader = dataloader.crwu_dataloader(args.dataset, r=args.r, noise_mode=args.nois
 
 print('| Building net')
 net1 = create_model()
-net2 = create_model()
 cudnn.benchmark = True
 
 criterion = SemiLoss()
 # optimizer1 = optim.SGD(net1.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
 # optimizer2 = optim.SGD(net2.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
 optimizer1 = optim.Adam(net1.parameters(), lr=args.lr, weight_decay=5e-4)
-optimizer2 = optim.Adam(net2.parameters(), lr=args.lr, weight_decay=5e-4)
 wandb.config["optimizer"] = str(optimizer1).split(' ')[0]
 
 CE = nn.CrossEntropyLoss(reduction='none')
@@ -296,8 +288,6 @@ for epoch in range(args.num_epochs + 1):
         lr /= 2
     for param_group in optimizer1.param_groups:
         param_group['lr'] = lr
-    for param_group in optimizer2.param_groups:
-        param_group['lr'] = lr
     test_loader = loader.run('test')
     eval_loader = loader.run('eval_train')
 
@@ -305,23 +295,14 @@ for epoch in range(args.num_epochs + 1):
         warmup_trainloader = loader.run('warmup')
         print('Warmup Net1')
         warmup(epoch, net1, optimizer1, warmup_trainloader, "net1")
-        print('\nWarmup Net2')
-        warmup(epoch, net2, optimizer2, warmup_trainloader, "net2")
 
     else:
         prob1, all_loss[0] = eval_train(net1, all_loss[0], epoch)
-        prob2, all_loss[1] = eval_train(net2, all_loss[1], epoch)
-
         pred1 = (prob1 > args.p_threshold)
-        pred2 = (prob2 > args.p_threshold)
 
         print('Train Net1')
-        labeled_trainloader, unlabeled_trainloader = loader.run('train', pred2, prob2, "net1", epoch)  # co-divide
-        train(epoch, net1, net2, optimizer1, labeled_trainloader, unlabeled_trainloader, "net1")  # train net1
+        labeled_trainloader, unlabeled_trainloader = loader.run('train', pred1, prob1, "net1", epoch)  # co-divide
+        train(epoch, net1, optimizer1, labeled_trainloader, unlabeled_trainloader, "net1")  # train net1
 
-        print('\nTrain Net2')
-        labeled_trainloader, unlabeled_trainloader = loader.run('train', pred1, prob1, "net2", epoch)  # co-divide
-        train(epoch, net2, net1, optimizer2, labeled_trainloader, unlabeled_trainloader, "net2")  # train net2
-
-    test(epoch, net1, net2)
+    test(epoch, net1)
 wandb.finish()

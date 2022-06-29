@@ -145,6 +145,7 @@ class jn_dataloader():
         self.log = log
         self.noise_file = noise_file
         self.labeled_dataset = None
+        self.unlabeled_dataset = None
         if self.dataset == 'jn':
             self.transform_train = ComposeTransform([
                 Jitter(),
@@ -185,6 +186,10 @@ class jn_dataloader():
             unlabeled_dataset = jn_dataset(dataset=self.dataset, noise_mode=self.noise_mode, r=self.r,
                                            root_dir=self.root_dir, transform=self.transform_train, mode="unlabeled",
                                            noise_file=self.noise_file, pred=pred)
+            if len(unlabeled_dataset) == 0:
+                unlabeled_dataset = self.unlabeled_dataset
+            else:
+                self.unlabeled_dataset = unlabeled_dataset
             unlabeled_trainloader = DataLoader(
                 dataset=unlabeled_dataset,
                 batch_size=self.batch_size,

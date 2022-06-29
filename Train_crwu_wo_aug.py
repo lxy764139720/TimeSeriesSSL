@@ -13,7 +13,7 @@ import numpy as np
 from cnn_dropout import *
 from sklearn.mixture import GaussianMixture
 import wandb
-import dataloader_crwu_sep_aug as dataloader
+import dataloader_crwu_wo_aug as dataloader
 
 parser = argparse.ArgumentParser(description='PyTorch CRWU Training')
 parser.add_argument('--batch_size', default=256, type=int, help='train batchsize')
@@ -37,9 +37,9 @@ cur_time = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
 cfg = vars(args)
 print(cfg)
 wandb.init(project="TimeSeriesSSL_crwu", config=cfg)
-wandb.run.name = cur_time
+wandb.run.name = "wo-aug-" + cur_time
 wandb.run.save()
-wandb.config["algorithm"] = "divide-mix"
+wandb.config["algorithm"] = "divide-mix-wo_aug"
 
 torch.cuda.set_device(args.gpuid)
 random.seed(args.seed)

@@ -35,9 +35,9 @@ parser.add_argument('--beta', default=0.1, type=float,
                     metavar='H-P', help='the coefficient of Entropy Loss')
 parser.add_argument('--lambda1', default=600, type=int,
                     metavar='H-P', help='the value of lambda')
-parser.add_argument('--stage1', default=60, type=int,
+parser.add_argument('--stage1', default=50, type=int,
                     metavar='H-P', help='number of epochs utill stage1')
-parser.add_argument('--stage2', default=100, type=int,
+parser.add_argument('--stage2', default=297, type=int,
                     metavar='H-P', help='number of epochs utill stage2')
 parser.add_argument('--num_epochs', default=300, type=int, metavar='H-P',
                     help='number of total epochs to run')
@@ -332,12 +332,8 @@ def adjust_learning_rate(optimizer, epoch):
     """Sets the learning rate"""
     if epoch < args.stage2:
         lr = args.lr
-    elif epoch < (args.num_epochs - args.stage2) // 3 + args.stage2:
-        lr = args.lr2
-    elif epoch < 2 * (args.num_epochs - args.stage2) // 3 + args.stage2:
-        lr = args.lr2 // 5
     else:
-        lr = args.lr2 // 10
+        lr = args.lr
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
 

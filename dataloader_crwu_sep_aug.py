@@ -112,6 +112,9 @@ class crwu_dataset(Dataset):
             if dataset == 'crwu':
                 train_data, _, train_label, _ = load_crwu_data()
                 train_label = train_label.flatten().tolist()
+            label_file = '%s/train_label.json' % './CRWU_dataset'
+            if not os.path.exists(label_file):
+                json.dump(train_label, open(label_file, "w"))
 
             if os.path.exists(noise_file):
                 noise_label = json.load(open(noise_file, "r"))
@@ -133,7 +136,6 @@ class crwu_dataset(Dataset):
                     else:
                         noise_label.append(train_label[i])
                 print("save noisy labels to %s ..." % noise_file)
-                # print(noise_label)
                 json.dump(noise_label, open(noise_file, "w"))
 
             if self.mode == 'all':
@@ -230,6 +232,7 @@ class crwu_dataloader():
         self.log = log
         self.noise_file = noise_file
         self.labeled_dataset = None
+        self.unlabeled_dataset = None
         if self.dataset == 'crwu':
             self.transform_train = ComposeTransform([
                 Jitter(),
@@ -270,6 +273,10 @@ class crwu_dataloader():
             unlabeled_dataset = crwu_dataset(dataset=self.dataset, noise_mode=self.noise_mode, r=self.r,
                                              root_dir=self.root_dir, transform=self.transform_train, mode="unlabeled",
                                              noise_file=self.noise_file, pred=pred)
+            if len(unlabeled_dataset) == 0:
+                unlabeled_dataset = self.unlabeled_dataset
+            else:
+                self.unlabeled_dataset = unlabeled_dataset
             unlabeled_trainloader = DataLoader(
                 dataset=unlabeled_dataset,
                 batch_size=self.batch_size,
