@@ -37,9 +37,9 @@ cur_time = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
 cfg = vars(args)
 print(cfg)
 wandb.init(project="TimeSeriesSSL_crwu", config=cfg)
-wandb.run.name = "wo-refine-" + cur_time
+wandb.run.name = cur_time
 wandb.run.save()
-wandb.config["algorithm"] = "divide-mix-wo-refine"
+wandb.config["algorithm"] = "divide-mix"
 wandb.config["architecture"] = "cnn_gap"
 
 torch.cuda.set_device(args.gpuid)
@@ -92,6 +92,7 @@ def train(epoch, net, net2, optimizer, labeled_trainloader, unlabeled_trainloade
             outputs_x2 = net(inputs_x2)
 
             px = (torch.softmax(outputs_x, dim=1) + torch.softmax(outputs_x2, dim=1)) / 2
+            px = w_x * labels_x + (1 - w_x) * px
             ptx = px ** (1 / args.T)  # temperature sharpening
 
             targets_x = ptx / ptx.sum(dim=1, keepdim=True)  # normalize
@@ -220,14 +221,14 @@ def eval_train(model, all_loss, epoch):
     gmm.fit(input_loss)
     prob = gmm.predict_proba(input_loss)
     prob = prob[:, gmm.means_.argmin()]
-    # if epoch == 50:
-    #     np.savetxt(args.data_path + '/losses.csv', input_loss.detach().cpu().numpy(), delimiter=',')
-    #     weights = gmm.weights_
-    #     means = gmm.means_
-    #     covs = gmm.covariances_
-    #     np.savetxt(args.data_path + '/weights.txt', weights)
-    #     np.savetxt(args.data_path + '/means.txt', means)
-    #     np.save(args.data_path + '/covs.npy', covs)
+    if epoch == 150:
+        np.savetxt(args.data_path + '/losses_' + str(args.r) + '.csv', input_loss.detach().cpu().numpy(), delimiter=',')
+        # weights = gmm.weights_
+        # means = gmm.means_
+        # covs = gmm.covariances_
+        # np.savetxt(args.data_path + '/weights.txt', weights)
+        # np.savetxt(args.data_path + '/means.txt', means)
+        # np.save(args.data_path + '/covs.npy', covs)
     return prob, all_loss
 
 

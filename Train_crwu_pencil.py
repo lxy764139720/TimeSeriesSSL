@@ -13,7 +13,7 @@ import torch.optim
 from torch.utils.data import Dataset, DataLoader
 import numpy as np
 import wandb
-from cnn_dropout import Model
+from cnn_gap import Model
 from dataloader_crwu_pencil import crwu_dataset, ComposeTransform, Jitter, Scaling, ToTensor
 
 parser = argparse.ArgumentParser(description='PyTorch CRWU Training')
@@ -68,6 +68,7 @@ wandb.init(project="TimeSeriesSSL_crwu", config=cfg)
 wandb.run.name = "pencil-" + cur_time
 wandb.run.save()
 wandb.config["algorithm"] = "PENCIL"
+wandb.config["architecture"] = "cnn_gap"
 
 best_prec1 = 0
 

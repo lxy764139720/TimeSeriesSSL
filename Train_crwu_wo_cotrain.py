@@ -10,7 +10,7 @@ import random
 import os
 import argparse
 import numpy as np
-from cnn_dropout import *
+from cnn_gap import *
 from sklearn.mixture import GaussianMixture
 import wandb
 import dataloader_crwu_sep_aug as dataloader
@@ -40,6 +40,7 @@ wandb.init(project="TimeSeriesSSL_crwu", config=cfg)
 wandb.run.name = "wo-cotrain-" + cur_time
 wandb.run.save()
 wandb.config["algorithm"] = "divide-mix-wo-cotrain"
+wandb.config["architecture"] = "cnn_gap"
 
 torch.cuda.set_device(args.gpuid)
 random.seed(args.seed)

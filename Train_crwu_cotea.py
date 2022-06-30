@@ -9,7 +9,7 @@ from torch.utils.data import Dataset, DataLoader
 import torchvision.transforms as transforms
 
 from dataloader_crwu_cotea import crwu_dataset, ToTensor
-from cnn_dropout import Model
+from cnn_gap import Model
 import argparse, sys
 import numpy as np
 import scipy.io as sio
@@ -23,8 +23,8 @@ import wandb
 from loss_cotea import loss_coteaching, loss_coteaching_plus
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--lr', type=float, default=0.001)
-parser.add_argument('--batch_size', default=256, type=int, help='train batchsize')
+parser.add_argument('--lr', type=float, default=0.002)
+parser.add_argument('--batch_size', default=64, type=int, help='train batchsize')
 parser.add_argument('--result_dir', type=str, help='dir to save result txt files', default='results/')
 parser.add_argument('--r', type=float, help='corruption rate, should be less than 1', default=0.2)
 parser.add_argument('--forget_rate', type=float, help='forget rate', default=None)
@@ -51,6 +51,7 @@ wandb.init(project="TimeSeriesSSL_crwu", config=cfg)
 wandb.run.name = "co_teaching+-" + cur_time
 wandb.run.save()
 wandb.config["algorithm"] = "co-teaching+"
+wandb.config["architecture"] = "cnn_gap"
 
 # Seed
 torch.cuda.set_device(args.gpuid)

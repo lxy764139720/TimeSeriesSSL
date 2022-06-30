@@ -108,10 +108,16 @@ class crwu_dataset(Dataset):
             if dataset == 'crwu':
                 _, self.test_data, _, self.test_label = load_crwu_data()
                 self.test_label = self.test_label.flatten().tolist()
+            test_label_file = '%s/test_label.json' % './CRWU_dataset'
+            if not os.path.exists(test_label_file):
+                json.dump(self.test_label, open(test_label_file, "w"))
         else:
             if dataset == 'crwu':
                 train_data, _, train_label, _ = load_crwu_data()
                 train_label = train_label.flatten().tolist()
+            train_label_file = '%s/train_label.json' % './CRWU_dataset'
+            if not os.path.exists(train_label_file):
+                json.dump(train_label, open(train_label_file, "w"))
 
             if os.path.exists(noise_file):
                 noise_label = json.load(open(noise_file, "r"))
@@ -178,7 +184,7 @@ class crwu_dataset(Dataset):
         elif self.mode == 'test':
             series, target = self.test_data[index], self.test_label[index]
             series = self.transform(series)
-            return series, target
+            return series, target, index
 
     def __len__(self):
         if self.mode != 'test':
@@ -233,6 +239,8 @@ class crwu_dataloader():
         self.unlabeled_dataset = None
         if self.dataset == 'crwu':
             self.transform_train = ComposeTransform([
+                Jitter(),
+                Scaling(),
                 ToTensor(),
             ])
             self.transform_test = ComposeTransform([

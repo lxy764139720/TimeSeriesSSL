@@ -13,7 +13,7 @@ import numpy as np
 from cnn_gap import *
 from sklearn.mixture import GaussianMixture
 import wandb
-import dataloader_crwu_sep_aug as dataloader
+import dataloader_crwu_save_feat as dataloader
 
 parser = argparse.ArgumentParser(description='PyTorch CRWU Training')
 parser.add_argument('--batch_size', default=256, type=int, help='train batchsize')
@@ -37,9 +37,9 @@ cur_time = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
 cfg = vars(args)
 print(cfg)
 wandb.init(project="TimeSeriesSSL_crwu", config=cfg)
-wandb.run.name = "wo-refine-" + cur_time
+wandb.run.name = cur_time
 wandb.run.save()
-wandb.config["algorithm"] = "divide-mix-wo-refine"
+wandb.config["algorithm"] = "divide-mix"
 wandb.config["architecture"] = "cnn_gap"
 
 torch.cuda.set_device(args.gpuid)
@@ -92,6 +92,7 @@ def train(epoch, net, net2, optimizer, labeled_trainloader, unlabeled_trainloade
             outputs_x2 = net(inputs_x2)
 
             px = (torch.softmax(outputs_x, dim=1) + torch.softmax(outputs_x2, dim=1)) / 2
+            px = w_x * labels_x + (1 - w_x) * px
             ptx = px ** (1 / args.T)  # temperature sharpening
 
             targets_x = ptx / ptx.sum(dim=1, keepdim=True)  # normalize
@@ -178,8 +179,9 @@ def test(epoch, net1, net2):
     net2.eval()
     correct = 0
     total = 0
+
     with torch.no_grad():
-        for batch_idx, (inputs, targets) in enumerate(test_loader):
+        for batch_idx, (inputs, targets, index) in enumerate(test_loader):
             inputs, targets = inputs.cuda(), targets.cuda()
             outputs1 = net1(inputs)
             outputs2 = net2(inputs)
@@ -229,6 +231,25 @@ def eval_train(model, all_loss, epoch):
     #     np.savetxt(args.data_path + '/means.txt', means)
     #     np.save(args.data_path + '/covs.npy', covs)
     return prob, all_loss
+
+
+def save_feat(net, warmup_loader, test_loader):
+    net.eval()
+
+    train_feat = np.zeros((len(warmup_loader.dataset), 256))
+    test_feat = np.zeros((len(test_loader.dataset), 256))
+    with torch.no_grad():
+        for batch_idx, (inputs, targets, index) in enumerate(warmup_loader):
+            inputs, targets = inputs.cuda(), targets.cuda()
+            feat = net.get_feat(inputs)
+            train_feat[index] = feat.detach().cpu().numpy()
+        np.save(args.data_path + '/train_feat.npy', train_feat)
+        for batch_idx, (inputs, targets, index) in enumerate(test_loader):
+            inputs, targets = inputs.cuda(), targets.cuda()
+            feat = net1.get_feat(inputs)
+            np.save(args.data_path + '/test_feat.npy', feat.detach().cpu().numpy())
+            test_feat[index] = feat.detach().cpu().numpy()
+        np.save(args.data_path + '/test_feat.npy', test_feat)
 
 
 def linear_rampup(current, warm_up, rampup_length=16):
@@ -324,4 +345,9 @@ for epoch in range(args.num_epochs + 1):
         train(epoch, net2, net1, optimizer2, labeled_trainloader, unlabeled_trainloader, "net2")  # train net2
 
     test(epoch, net1, net2)
+
+    if epoch == args.num_epochs:
+        warmup_loader = loader.run('warmup')
+        save_feat(net1, warmup_loader, test_loader)
+
 wandb.finish()

@@ -86,6 +86,23 @@ def test(epoch, net1):
     wandb.log({"Accuracy": acc}, step=epoch)
 
 
+def save_loss(model):
+    model.eval()
+    losses = torch.zeros(len(eval_loader.dataset))
+    with torch.no_grad():
+        for batch_idx, (inputs, targets, index) in enumerate(eval_loader):
+            inputs, targets = inputs.cuda(), targets.cuda()
+            outputs = model(inputs)
+            loss = CE(outputs, targets)
+            for b in range(inputs.size(0)):
+                losses[index[b]] = loss[b]
+    losses = (losses - losses.min()) / (losses.max() - losses.min())
+
+    input_loss = losses.reshape(-1, 1)
+    np.savetxt(args.data_path + '/baseline_losses_' + str(args.r) + '.csv',
+               input_loss.detach().cpu().numpy(), delimiter=',')
+
+
 def create_model():
     model = Model(num_classes=args.num_class)
     model = model.cuda()
@@ -108,6 +125,7 @@ cudnn.benchmark = True
 optimizer1 = optim.Adam(net1.parameters(), lr=args.lr, weight_decay=5e-4)
 wandb.config["optimizer"] = str(optimizer1).split(' ')[0]
 
+CE = nn.CrossEntropyLoss(reduction='none')
 CEloss = nn.CrossEntropyLoss()
 
 all_loss = [[], []]  # save the history of losses from two networks
@@ -117,10 +135,13 @@ for epoch in range(args.num_epochs + 1):
     for param_group in optimizer1.param_groups:
         param_group['lr'] = lr
     test_loader = loader.run('test')
+    eval_loader = loader.run('eval_train')
 
     warmup_trainloader = loader.run('warmup')
     print('Warmup Net1')
     warmup(epoch, net1, optimizer1, warmup_trainloader, "net1")
 
     test(epoch, net1)
+    if epoch == 150:
+        save_loss(net1)
 wandb.finish()

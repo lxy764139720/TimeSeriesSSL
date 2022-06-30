@@ -35,3 +35,22 @@ class Model(nn.Module):
         x = self.dropout(x)
         x = self.dense(x)
         return x
+
+    def get_feat(self, x):
+        # x: [batch, len] -> [batch, 1, len]
+        x = x.view(x.shape[0], 1, x.shape[1])
+
+        x = self.conv1(x)
+        x = F.relu(x)
+        x = self.pool1(x)  # x: [batch, 64, 60]
+
+        x = self.conv2(x)
+        x = F.relu(x)
+        x = self.pool2(x)  # x: [batch, 128, 30]
+
+        x = self.conv3(x)
+        x = F.relu(x)
+        x = self.gap(x)  # x: [batch, 256, 1]
+
+        feat = x.view(x.shape[0], -1)
+        return feat

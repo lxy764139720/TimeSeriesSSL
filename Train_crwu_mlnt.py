@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 import torch.backends.cudnn as cudnn
-from cnn_dropout_mlnt import Model
+from cnn_gap_mlnt import Model
 import math
 import os
 import sys
@@ -45,6 +45,7 @@ wandb.init(project="TimeSeriesSSL_crwu", config=cfg)
 wandb.run.name = "mlnt-" + cur_time
 wandb.run.save()
 wandb.config["algorithm"] = "MLNT"
+wandb.config["architecture"] = "cnn_gap"
 
 random.seed(args.seed)
 torch.cuda.set_device(args.gpuid)
